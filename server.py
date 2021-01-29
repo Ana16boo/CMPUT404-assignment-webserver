@@ -1,7 +1,10 @@
 #  coding: utf-8 
 import socketserver
+import os
+import mimetypes
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Anastasia Borissova
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +30,76 @@ import socketserver
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
+# USER STORIES:
+# As a user I want to view files in ./www via a web browser
+# As a user I want to view files in ./www via curl
+# As a webserver admin I want to serve HTML and CSS files from ./www
+# As a webserver admin I want ONLY files in ./www and deeper to be served.
+
+# REQUIREMENTS:
+# [ ] The webserver can pass all the tests in not-free-tests.py
+# [ ] The webserver can serve 404 errors for paths not found
+# [ ] I can check out the source code via an HTTP git URL
+
+
 class MyWebServer(socketserver.BaseRequestHandler):
-    
+
     def handle(self):
+        error404 = False
+        error301 = False
+
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        #print("Got a request of: %s\n" % self.data)
+        text = self.data.decode().split("\r\n")
+        header = text[0].split(" ")
+
+        # Get method
+        method = header[0]
+
+        # Get path
+        #print("PATH:______________", header[1])
+        filePath = os.path.abspath(os.getcwd() + "/www" + header[1])
+
+        if os.path.exists(filePath):
+            # https://pythonexamples.org/python-check-if-path-is-file-or-directory/
+            if os.path.isdir(filePath):
+                if header[1][-1] == '/':
+                    filePath = os.path.abspath(os.getcwd() + "/www" + header[1] + "index.html")
+                else:
+                    statusCode = f"301 Moved Permanently to http://127.0.0.1:8080{header[1]}/\r\n"
+                    content = f"<h1>301 Moved Permanently to http://127.0.0.1:8080{header[1]}/</h1>"
+                    filePath = os.path.abspath(os.getcwd() + "/www" + header[1] + "/index.html")
+                    error301 = True
+            else:
+                filePath = os.path.abspath(os.getcwd() + "/www" + header[1])
+        else:
+            error404 = True
+            statusCode = "404 Not Found\r\n"
+            content = "<h1>404 Not Found</h1>"
+
+        # Get protocol
+        protocol = header[2]
+
+        # Get MIME type
+        # https://docs.python.org/3/library/mimetypes.html
+        mimeType = (mimetypes.guess_type(filePath))[0]
+        if mimeType is None:
+            mimeType = "text/html"
+        mimeType = "Content-Type: " + mimeType + "\r\n"
+
+
+        # Get status code and content
+        if method != "GET":
+            statusCode = "405 Method Not Allowed\r\n"
+            content = "<h1>405 Method Not Allowed</h1>"
+        elif not error404 and not error301:
+            statusCode = "200 OK\r\n"
+            content = open(filePath, "r").read()
+
+        # Send
+        response = protocol + " " + statusCode + mimeType + "\r\n" + content + "\r\n"
+        self.request.sendall(response.encode())
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
