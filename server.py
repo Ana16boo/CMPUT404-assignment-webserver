@@ -29,19 +29,6 @@ import mimetypes
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-
-# USER STORIES:
-# As a user I want to view files in ./www via a web browser
-# As a user I want to view files in ./www via curl
-# As a webserver admin I want to serve HTML and CSS files from ./www
-# As a webserver admin I want ONLY files in ./www and deeper to be served.
-
-# REQUIREMENTS:
-# [ ] The webserver can pass all the tests in not-free-tests.py
-# [ ] The webserver can serve 404 errors for paths not found
-# [ ] I can check out the source code via an HTTP git URL
-
-
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
