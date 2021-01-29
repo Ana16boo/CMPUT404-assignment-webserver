@@ -34,6 +34,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         error404 = False
         error301 = False
+        statusCode = None
+        content = None
 
         self.data = self.request.recv(1024).strip()
         #print("Got a request of: %s\n" % self.data)
@@ -44,21 +46,23 @@ class MyWebServer(socketserver.BaseRequestHandler):
         method = header[0]
 
         # Get path
+        securePath = (header[1]).replace("../", "")
         #print("PATH:______________", header[1])
-        filePath = os.path.abspath(os.getcwd() + "/www" + header[1])
+        #print("STRIPPED PATH:______________", securePath)
+        filePath = os.path.abspath(os.getcwd() + "/www" + securePath)
 
         if os.path.exists(filePath):
             # https://pythonexamples.org/python-check-if-path-is-file-or-directory/
             if os.path.isdir(filePath):
-                if header[1][-1] == '/':
-                    filePath = os.path.abspath(os.getcwd() + "/www" + header[1] + "index.html")
+                if securePath[-1] == '/':
+                    filePath = os.path.abspath(os.getcwd() + "/www" + securePath + "index.html")
                 else:
-                    statusCode = f"301 Moved Permanently to http://127.0.0.1:8080{header[1]}/\r\n"
-                    content = f"<h1>301 Moved Permanently to http://127.0.0.1:8080{header[1]}/</h1>"
-                    filePath = os.path.abspath(os.getcwd() + "/www" + header[1] + "/index.html")
+                    statusCode = f"301 Moved Permanently to http://127.0.0.1:8080{securePath}/\r\n"
+                    content = f"<h1>301 Moved Permanently to http://127.0.0.1:8080{securePath}/</h1>"
+                    filePath = os.path.abspath(os.getcwd() + "/www" + securePath + "/index.html")
                     error301 = True
             else:
-                filePath = os.path.abspath(os.getcwd() + "/www" + header[1])
+                filePath = os.path.abspath(os.getcwd() + "/www" + securePath)
         else:
             error404 = True
             statusCode = "404 Not Found\r\n"
